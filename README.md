@@ -68,3 +68,29 @@ The analyzer generates season-based statistics showing:
 - `scrape.go` - Web scraping logic
 - `analyze.go` - Statistics calculation
 - `output/` - Default folder for downloaded exam statistic data (JSON format)
+
+## Development
+
+### Setting up Git Hooks
+
+This project uses a pre-commit hook to automatically check code formatting and potential issues before committing.
+
+**Setup (one-time):**
+```bash
+chmod +x .git/hooks/pre-commit
+```
+
+The hook will automatically:
+- Run `gofmt` to check/fix code formatting
+- Run `go vet` to detect potential bugs
+
+If `gofmt` finds formatting issues, it will fix them and ask you to review and stage the changes before committing.
+
+### CI/CD Pipeline
+
+Linting checks are also enforced in GitHub Actions (`.github/workflows/lint.yml`):
+- `gofmt` - Code formatting
+- `go vet` - Bug detection
+- `golangci-lint` - Comprehensive linting
+
+The pipeline runs automatically on push and pull requests to the `main` branch.
