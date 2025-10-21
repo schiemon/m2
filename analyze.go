@@ -201,7 +201,7 @@ func printSeasonStats(stats []SeasonStatsForAllQuestions) {
 	fmt.Println("=== Season Statistics ===")
 	fmt.Println()
 	fmt.Println("Season | Min   | Max   | Avg   | P50   | StdDev | Uncounted")
-	fmt.Println("--------|-------|-------|-------|-------|--------|----------")
+	fmt.Println("-------|-------|-------|-------|-------|--------|----------")
 
 	for _, seasonStat := range stats {
 		fmt.Printf("%6s | %.3f | %.3f | %.3f | %.3f | %.3f  | %d\n",
