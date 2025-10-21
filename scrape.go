@@ -90,7 +90,11 @@ func fetchAndParse(url string) examStats {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to fetch URL: %v", err))
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			panic(fmt.Sprintf("Failed to close response body: %v", err))
+		}
+	}()
 
 	if resp.StatusCode != 200 {
 		panic(fmt.Sprintf("HTTP error: %d %s", resp.StatusCode, resp.Status))
@@ -176,7 +180,11 @@ func writeJSON(filename string, stats examStats) {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create file: %v", err))
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			panic(fmt.Sprintf("Failed to close file: %v", err))
+		}
+	}()
 
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", "  ")

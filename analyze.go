@@ -32,7 +32,11 @@ func readQuestionStatsJSON(inputFolder string, season string, year int, day int,
 	if err != nil {
 		panic(fmt.Sprintf("Failed to open file %s: %v", filepath, err))
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			panic(fmt.Sprintf("Failed to close file %s: %v", filepath, err))
+		}
+	}()
 
 	var stats examStats
 	decoder := json.NewDecoder(file)
@@ -42,63 +46,6 @@ func readQuestionStatsJSON(inputFolder string, season string, year int, day int,
 	}
 
 	return stats
-}
-
-func aggQuestionStatsForRange(fromYear int, toYear int, inputFolder string) map[int][]float64 {
-	// Map: question number -> list of correct percentages across all years
-	result := make(map[int][]float64)
-
-	for year := fromYear; year <= toYear; year++ {
-		yearStats := aggQuestionStatsForYear(year, inputFolder)
-
-		// Add stats for each question
-		for questionNum, stats := range yearStats {
-			// We collect all correct percentages per question
-			for i := 0; i < len(stats); i++ {
-				result[questionNum] = append(result[questionNum], stats[i])
-			}
-		}
-	}
-
-	return result
-}
-
-func aggQuestionStatsForYear(year int, inputFolder string) map[int][]float64 {
-	// Map: question number -> list of correct percentages for that year
-	questionStats := make(map[int][]float64)
-
-	// Collect all exam instances for this year
-	for _, season := range []string{Spring, Autumn} {
-		for day := 1; day <= 2; day++ {
-			for _, group := range []string{groupA, groupB} {
-				stats := readQuestionStatsJSON(inputFolder, season, year, day, group)
-
-				for questionNumStr, question := range stats {
-					questionNum := parseInt(questionNumStr)
-
-					if question != nil {
-						// Get the percentage for the correct answer
-						var correctPerc float64
-						switch question.CorrectAnswer {
-						case "A":
-							correctPerc = question.A
-						case "B":
-							correctPerc = question.B
-						case "C":
-							correctPerc = question.C
-						case "D":
-							correctPerc = question.D
-						case "E":
-							correctPerc = question.E
-						}
-						questionStats[questionNum] = append(questionStats[questionNum], correctPerc)
-					}
-				}
-			}
-		}
-	}
-
-	return questionStats
 }
 
 func calculateSeasonStats(fromYear int, toYear int, inputFolder string) []SeasonStatsForAllQuestions {
@@ -215,10 +162,4 @@ func printSeasonStats(stats []SeasonStatsForAllQuestions) {
 		)
 	}
 	fmt.Println()
-}
-
-func parseInt(s string) int {
-	var num int
-	fmt.Sscanf(s, "%d", &num)
-	return num
 }

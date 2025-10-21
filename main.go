@@ -62,7 +62,10 @@ func handleScrape(args []string) {
 	to := scrapeCmd.Int("to", defaultMaxYear, "End year")
 	out := scrapeCmd.String("out", defaultOutputFolder, "Output folder")
 
-	scrapeCmd.Parse(args)
+	if err := scrapeCmd.Parse(args); err != nil {
+		fmt.Fprintf(os.Stderr, "Error parsing scrape arguments: %v\n", err)
+		os.Exit(1)
+	}
 
 	ScrapeRange(*from, *to, *out)
 }
@@ -73,7 +76,10 @@ func handleAnalyze(args []string) {
 	to := analyzeCmd.Int("to", defaultMaxYear, "End year")
 	in := analyzeCmd.String("in", defaultOutputFolder, "Input folder")
 
-	analyzeCmd.Parse(args)
+	if err := analyzeCmd.Parse(args); err != nil {
+		fmt.Fprintf(os.Stderr, "Error parsing analyze arguments: %v\n", err)
+		os.Exit(1)
+	}
 
 	fmt.Printf("Analyzing from %d to %d, input from %s\n", *from, *to, *in)
 	AnalyzeRange(*from, *to, *in)

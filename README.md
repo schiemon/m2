@@ -80,9 +80,16 @@ This project uses a pre-commit hook to automatically check code formatting and p
 chmod +x .git/hooks/pre-commit
 ```
 
+**Prerequisites:**
+```bash
+# Install golangci-lint
+brew install golangci-lint
+```
+
 The hook will automatically:
 - Run `gofmt` to check/fix code formatting
 - Run `go vet` to detect potential bugs
+- Run `golangci-lint` for comprehensive linting (if installed)
 
 If `gofmt` finds formatting issues, it will fix them and ask you to review and stage the changes before committing.
 
