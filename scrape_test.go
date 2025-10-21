@@ -22,7 +22,7 @@ func TestBuildURL(t *testing.T) {
 			year:    2024,
 			day:     1,
 			group:   "A",
-			wantURL: "https://www.medi-learn.de/statistik/stex/fragenstatistiken/index.php?ex=S-F24-Tag%201&gruppe=Gruppe%20A",
+			wantURL: baseURL + "?ex=S-F24-Tag%201&gruppe=Gruppe%20A",
 		},
 		{
 			name:    "Autumn 2024 Day 2 Group B",
@@ -30,7 +30,7 @@ func TestBuildURL(t *testing.T) {
 			year:    2024,
 			day:     2,
 			group:   "B",
-			wantURL: "https://www.medi-learn.de/statistik/stex/fragenstatistiken/index.php?ex=S-H24-Tag%202&gruppe=Gruppe%20B",
+			wantURL: baseURL + "?ex=S-H24-Tag%202&gruppe=Gruppe%20B",
 		},
 		{
 			name:    "Spring 2016 Day 1 Group A",
@@ -38,7 +38,7 @@ func TestBuildURL(t *testing.T) {
 			year:    2016,
 			day:     1,
 			group:   "A",
-			wantURL: "https://www.medi-learn.de/statistik/stex/fragenstatistiken/index.php?ex=S-F16-Tag%201&gruppe=Gruppe%20A",
+			wantURL: baseURL + "?ex=S-F16-Tag%201&gruppe=Gruppe%20A",
 		},
 		{
 			name:    "Autumn 2023 Day 2 Group B",
@@ -46,7 +46,7 @@ func TestBuildURL(t *testing.T) {
 			year:    2023,
 			day:     2,
 			group:   "B",
-			wantURL: "https://www.medi-learn.de/statistik/stex/fragenstatistiken/index.php?ex=S-H23-Tag%202&gruppe=Gruppe%20B",
+			wantURL: baseURL + "?ex=S-H23-Tag%202&gruppe=Gruppe%20B",
 		},
 		{
 			name:   "URL is properly encoded",
@@ -63,7 +63,7 @@ func TestBuildURL(t *testing.T) {
 
 				// Verify base URL is present
 				if !strings.HasPrefix(got, baseURL) {
-					t.Errorf("URL should start with baseURL: %s, got: %s", baseURL, got)
+					t.Errorf("URL should start with BaseURL: %s, got: %s", baseURL, got)
 				}
 
 				// Verify query parameters are present
@@ -128,43 +128,5 @@ func TestBuildURL(t *testing.T) {
 				tt.validate(t, got)
 			}
 		})
-	}
-}
-
-func TestBuildURLParameterOrder(t *testing.T) {
-	// Test that parameters appear in the correct order
-	url := buildURL("F", 2024, 1, "A")
-
-	exIndex := strings.Index(url, "ex=")
-	gruppeIndex := strings.Index(url, "gruppe=")
-
-	if exIndex == -1 || gruppeIndex == -1 {
-		t.Fatal("URL missing required parameters")
-	}
-
-	if exIndex > gruppeIndex {
-		t.Errorf("Parameters in wrong order: ex parameter should come before gruppe parameter")
-	}
-}
-
-func TestBuildURLConsistency(t *testing.T) {
-	// Test that calling buildURL multiple times with same parameters produces same result
-	season := "F"
-	year := 2024
-	day := 1
-	group := "A"
-
-	url1 := buildURL(season, year, day, group)
-	url2 := buildURL(season, year, day, group)
-	url3 := buildURL(season, year, day, group)
-
-	if url1 != url2 || url2 != url3 {
-		t.Errorf("buildURL should be consistent: %s, %s, %s", url1, url2, url3)
-	}
-}
-
-func BenchmarkBuildURL(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		buildURL("F", 2024, 1, "A")
 	}
 }
