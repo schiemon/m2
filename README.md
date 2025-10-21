@@ -1,6 +1,6 @@
-# M2 Exam Statistics
+# M2 Exam Stats Scraper And Visualizer
 
-Analysis tool for the German medical licensing examination M2 (Zweiter Abschnitt der Ärztlichen Prüfung).
+This is a tool that scrapes and visualizes statistics on the German medical licensing examination M2 (Zweiter Abschnitt der Ärztlichen Prüfung). The data is fetched from [MEDI-LEARN](https://www.medi-learn.de/statistik/stex/fragenstatistiken/index.php?ex=S-F24-Tag%201&gruppe=Gruppe%20A).
 
 ## Overview
 
