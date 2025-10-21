@@ -4,9 +4,9 @@ This is a tool that scrapes and visualizes statistics on the German medical lice
 
 ## Overview
 
-This project scrapes and analyzes statistics from M2 exam questions, tracking correct answer rates across different exam seasons and years (2016-2024).
+This project scrapes and computes statistics from correct answer rates from M2 exams from 2016 up until 2024.
 
-## Season Statistics (2016-2024)
+## Exam Statistics (2016-2024)
 
 ```
 Season | Min   | Max   | Avg   | P50   | StdDev | Uncounted
@@ -34,7 +34,7 @@ Season | Min   | Max   | Avg   | P50   | StdDev | Uncounted
 ## Features
 
 - **Scrape**: Collect M2 exam data from online sources
-- **Analyze**: Generate statistics by season including min, max, average, median, and standard deviation of correct answer rates
+- **Analyze**: Computes statistics by season including min, max, average, median, and standard deviation of correct answer rates
 
 ## Usage
 
