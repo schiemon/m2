@@ -57,7 +57,7 @@ func calculateSeasonStats(fromYear int, toYear int, inputFolder string) []Season
 			var totalUncounted int
 
 			// Collect all correct percentages and uncounted questions for this season
-			for day := 1; day <= 2; day++ {
+			for day := 1; day <= 3; day++ {
 				for _, group := range []string{groupA, groupB} {
 					stats := readQuestionStatsJSON(inputFolder, season, year, day, group)
 

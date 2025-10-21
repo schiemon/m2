@@ -47,10 +47,10 @@ func ScrapeRange(fromYear int, toYear int, outputFolder string) {
 		}
 
 		for _, season := range []string{Spring, Autumn} {
-			// Each season has 2 days
-			for day := 1; day <= 2; day++ {
+			// Each season has 3 days
+			for day := 1; day <= 3; day++ {
 				for _, group := range []string{groupA, groupB} {
-					fmt.Printf("Scraping %s %d, day %d, group %s...\n", season, year, day, group)
+					fmt.Printf("Scraping %d%s, day %d, group %s...\n", year, season, day, group)
 					scrape(outputFolder, season, year, day, group)
 				}
 			}
