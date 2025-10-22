@@ -7,6 +7,10 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
+
+	"github.com/olekukonko/tablewriter"
+	"github.com/olekukonko/tablewriter/tw"
 )
 
 type SeasonStatsForAllQuestions struct {
@@ -21,7 +25,11 @@ type SeasonStatsForAllQuestions struct {
 
 func AnalyzeRange(fromYear int, toYear int, inputFolder string) {
 	seasonStats := calculateSeasonStats(fromYear, toYear, inputFolder)
-	printSeasonStats(seasonStats)
+	printSeasonStats(seasonStats, fromYear, toYear)
+
+	fmt.Println()
+	subjectStats := calculateSubjectStats(fromYear, toYear, inputFolder)
+	printSubjectStats(subjectStats, fromYear, toYear)
 }
 
 func readQuestionStatsJSON(inputFolder string, season string, year int, day int, group string) examStats {
@@ -144,22 +152,242 @@ func calculateSeasonStats(fromYear int, toYear int, inputFolder string) []Season
 	return result
 }
 
-func printSeasonStats(stats []SeasonStatsForAllQuestions) {
-	fmt.Println("=== Season Statistics ===")
-	fmt.Println()
-	fmt.Println("Season | Min   | Max   | Avg   | P50   | StdDev | Uncounted")
-	fmt.Println("-------|-------|-------|-------|-------|--------|----------")
+func printSeasonStats(stats []SeasonStatsForAllQuestions, fromYear int, toYear int) {
+	table := tablewriter.NewWriter(os.Stdout)
+	table.Header("Exam", "Min", "Max", "Avg", "P50", "STDDEV", "Uncounted")
 
 	for _, seasonStat := range stats {
-		fmt.Printf("%6s | %.3f | %.3f | %.3f | %.3f | %.3f  | %d\n",
+		_ = table.Append(
 			seasonStat.Label,
-			seasonStat.Min,
-			seasonStat.Max,
-			seasonStat.Avg,
-			seasonStat.P50,
-			seasonStat.StdDev,
-			seasonStat.NumUncounted,
+			fmt.Sprintf("%.3f", seasonStat.Min),
+			fmt.Sprintf("%.3f", seasonStat.Max),
+			fmt.Sprintf("%.3f", seasonStat.Avg),
+			fmt.Sprintf("%.3f", seasonStat.P50),
+			fmt.Sprintf("%.3f", seasonStat.StdDev),
+			fmt.Sprintf("%d", seasonStat.NumUncounted),
 		)
 	}
-	fmt.Println()
+
+	table.Caption(tw.Caption{
+		Text: fmt.Sprintf("EXAM STATISTICS (%d to %d)", fromYear, toYear),
+	})
+	if err := table.Render(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error rendering table: %v\n", err)
+	}
+}
+
+type SubjectStats struct {
+	Tag               string
+	SubjectName       string
+	SubSpecialtyName  *string
+	Count             int
+	CountMin          int
+	CountMax          int
+	CountAvg          float64
+	CountMedian       float64
+	CountStdDev       float64
+	CorrectnessAvg    float64
+	CorrectnessP50    float64
+	CorrectnessStdDev float64
+}
+
+func tagToSubjectName(tag string) string {
+	// Map known tags to subject names
+	subjectMap := map[string]string{
+		"Aug": "Auge",
+		"Rec": "Rechtsmedizin",
+		"Pat": "Pathologie",
+		"Epi": "Epidemiologie",
+	}
+
+	if name, exists := subjectMap[tag]; exists {
+		return name
+	}
+	return tag // Fallback to tag if unknown
+}
+
+func calculateSubjectStats(fromYear int, toYear int, inputFolder string) []SubjectStats {
+	// Map to track per-subject data
+	type SubjectData struct {
+		correctnesses []float64
+		name          string
+		subspecialty  *string
+	}
+	subjectDataMap := make(map[string]*SubjectData) // tag -> subject data
+
+	for year := fromYear; year <= toYear; year++ {
+		for _, season := range []string{Spring, Autumn} {
+			for day := 1; day <= 3; day++ {
+				for _, group := range []string{groupA, groupB} {
+					stats := readQuestionStatsJSON(inputFolder, season, year, day, group)
+
+					for _, question := range stats {
+						if question != nil && question.Subject != nil {
+							tag := question.Subject.Tag
+							subjectName := question.Subject.Name
+
+							if tag == "" {
+								continue
+							}
+
+							if subjectName == "" {
+								subjectName = tagToSubjectName(tag)
+							}
+
+							// Initialize if not seen before
+							if _, exists := subjectDataMap[tag]; !exists {
+								subjectDataMap[tag] = &SubjectData{
+									correctnesses: []float64{},
+									name:          subjectName,
+									subspecialty:  question.Subject.SubSubjectName,
+								}
+							}
+
+							// Get the percentage for the correct answer
+							var correctPerc float64
+							switch question.CorrectAnswer {
+							case "A":
+								correctPerc = question.A
+							case "B":
+								correctPerc = question.B
+							case "C":
+								correctPerc = question.C
+							case "D":
+								correctPerc = question.D
+							case "E":
+								correctPerc = question.E
+							}
+
+							subjectDataMap[tag].correctnesses = append(subjectDataMap[tag].correctnesses, correctPerc)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Convert to slice with statistics
+	var result []SubjectStats
+	for tag, data := range subjectDataMap {
+		result = append(result, SubjectStats{
+			Tag:              tag,
+			SubjectName:      data.name,
+			SubSpecialtyName: data.subspecialty,
+			Count:            len(data.correctnesses),
+		})
+	}
+
+	// Calculate statistics for each subject
+	for i, s := range result {
+		difficulties := subjectDataMap[s.Tag].correctnesses
+		if len(difficulties) > 0 {
+			// Count statistics
+			countMin := s.Count
+			countMax := s.Count
+			countAvg := float64(s.Count)
+			countMedian := float64(s.Count)
+
+			// Difficulty statistics
+			minDiff := difficulties[0]
+			maxDiff := difficulties[0]
+			sumDiff := 0.0
+
+			for _, d := range difficulties {
+				if d < minDiff {
+					minDiff = d
+				}
+				if d > maxDiff {
+					maxDiff = d
+				}
+				sumDiff += d
+			}
+
+			avgDiff := sumDiff / float64(len(difficulties))
+
+			// Calculate median difficulty
+			sortedDiff := make([]float64, len(difficulties))
+			copy(sortedDiff, difficulties)
+			sort.Float64s(sortedDiff)
+
+			var medianDiff float64
+			n := len(sortedDiff)
+			if n%2 == 0 {
+				medianDiff = (sortedDiff[n/2-1] + sortedDiff[n/2]) / 2
+			} else {
+				medianDiff = sortedDiff[n/2]
+			}
+
+			// Calculate standard deviation of difficulty
+			varianceDiff := 0.0
+			for _, d := range difficulties {
+				varianceDiff += (d - avgDiff) * (d - avgDiff)
+			}
+			varianceDiff /= float64(len(difficulties))
+			stdDevDiff := math.Sqrt(varianceDiff)
+
+			result[i].CountMin = countMin
+			result[i].CountMax = countMax
+			result[i].CountAvg = countAvg
+			result[i].CountMedian = countMedian
+			result[i].CountStdDev = 0
+			result[i].CorrectnessAvg = avgDiff
+			result[i].CorrectnessP50 = medianDiff
+			result[i].CorrectnessStdDev = stdDevDiff
+		}
+	}
+
+	// Sort by correctness in descending order (highest first = most correct)
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].CorrectnessAvg > result[j].CorrectnessAvg
+	})
+
+	return result
+}
+
+func printSubjectStats(stats []SubjectStats, fromYear int, toYear int) {
+	if len(stats) == 0 {
+		return
+	}
+
+	// Create table
+	table := tablewriter.NewWriter(os.Stdout)
+	table.Header("Subject Name (Subspecialty)", "Count", "Avg", "P50", "STDDEV", "Correctness")
+	// Set caption as title
+	table.Caption(tw.Caption{
+		Text: fmt.Sprintf("CORRECTNESS BY SUBJECT (%d to %d)", fromYear, toYear),
+	})
+
+	for _, s := range stats {
+		// Build the display name
+		displayName := s.SubjectName
+		if s.SubSpecialtyName != nil {
+			displayName = fmt.Sprintf("%s (%s)", s.SubjectName, *s.SubSpecialtyName)
+		}
+
+		// Calculate histogram bar position based on average correctness
+		// Lower (0.0) = harder questions, Higher (1.0) = easier questions
+		histogramWidth := 40
+		histWidth := int(s.CorrectnessAvg * float64(histogramWidth))
+		if histWidth < 0 {
+			histWidth = 0
+		}
+		if histWidth > histogramWidth {
+			histWidth = histogramWidth
+		}
+
+		histogram := "[" + strings.Repeat("=", histWidth) + strings.Repeat(" ", histogramWidth-histWidth) + "]"
+
+		_ = table.Append(
+			displayName,
+			fmt.Sprintf("%d", s.Count),
+			fmt.Sprintf("%.3f", s.CorrectnessAvg),
+			fmt.Sprintf("%.3f", s.CorrectnessP50),
+			fmt.Sprintf("%.3f", s.CorrectnessStdDev),
+			histogram,
+		)
+	}
+
+	if err := table.Render(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error rendering table: %v\n", err)
+	}
 }

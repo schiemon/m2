@@ -81,6 +81,5 @@ func handleAnalyze(args []string) {
 		os.Exit(1)
 	}
 
-	fmt.Printf("Analyzing from %d to %d, input from %s\n", *from, *to, *in)
 	AnalyzeRange(*from, *to, *in)
 }

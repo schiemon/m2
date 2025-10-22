@@ -28,13 +28,20 @@ const fetchDelaySeconds = 5
 
 const baseURL = "https://www.medi-learn.de/statistik/stex/fragenstatistiken/index.php"
 
+type Subject struct {
+	Tag            string  `json:"tag"`
+	Name           string  `json:"name"`
+	SubSubjectName *string `json:"subSubjectName"`
+}
+
 type questionStats struct {
-	CorrectAnswer string  `json:"correctAnswer"`
-	A             float64 `json:"A"`
-	B             float64 `json:"B"`
-	C             float64 `json:"C"`
-	D             float64 `json:"D"`
-	E             float64 `json:"E"`
+	Subject       *Subject `json:"subject"`
+	CorrectAnswer string   `json:"correctAnswer"`
+	A             float64  `json:"A"`
+	B             float64  `json:"B"`
+	C             float64  `json:"C"`
+	D             float64  `json:"D"`
+	E             float64  `json:"E"`
 }
 
 type examStats map[string]*questionStats // key is question number as string
@@ -112,7 +119,19 @@ func fetchAndParse(url string) examStats {
 		panic(fmt.Sprintf("Failed to parse HTML: %v", err))
 	}
 
-	return parseTable(doc)
+	prelimExamStats := parseTable(doc)
+	examStats := make(examStats)
+
+	for i := 1; i <= 107; i++ {
+		qNumStr := fmt.Sprintf("%d", i)
+		if stats, exists := prelimExamStats[qNumStr]; exists {
+			examStats[qNumStr] = stats
+		} else {
+			examStats[qNumStr] = nil
+		}
+	}
+
+	return examStats
 }
 
 func parseTable(doc *goquery.Document) examStats {
@@ -143,7 +162,11 @@ func parseTable(doc *goquery.Document) examStats {
 		if cells.Length() >= 8 {
 			correctAnswer := strings.TrimSpace(cells.Eq(2).Find("div").Text())
 
+			// Parse category from column 1 (dfn tag)
+			subject := parseSubject(cells.Eq(1))
+
 			questionStats := &questionStats{
+				Subject:       subject,
 				CorrectAnswer: correctAnswer,
 				A:             parsePercentage(cells.Eq(3).Text()),
 				B:             parsePercentage(cells.Eq(4).Text()),
@@ -156,6 +179,54 @@ func parseTable(doc *goquery.Document) examStats {
 	})
 
 	return stats
+}
+
+func parseSubject(cell *goquery.Selection) *Subject {
+	dfn := cell.Find("dfn.tooltip")
+	if dfn.Length() == 0 {
+		return nil
+	}
+
+	// Get the tag (text node before the span)
+	tag := ""
+	dfn.Contents().EachWithBreak(func(_ int, node *goquery.Selection) bool {
+		if node.Is("span") {
+			// Stop when we reach the span
+			return false
+		}
+		// This is the text node with the tag
+		text := node.Text()
+		if strings.TrimSpace(text) != "" {
+			tag = strings.TrimSpace(text)
+			return false
+		}
+		return true
+	})
+
+	// Extract category name from <strong> tag
+	categoryName := strings.TrimSpace(dfn.Find("strong").Text())
+
+	// Extract subcategory description from text after <strong>
+	var subSubjectName *string
+	span := dfn.Find("span")
+	if span.Length() > 0 {
+		// Get all text from span, then remove the strong text
+		fullText := span.Text()
+		// Remove the strong tag content and trim
+		parts := strings.SplitN(fullText, categoryName, 2)
+		if len(parts) > 1 {
+			trimmedSubject := strings.TrimSpace(parts[1])
+			if trimmedSubject != "" {
+				subSubjectName = &trimmedSubject
+			}
+		}
+	}
+
+	return &Subject{
+		Tag:            tag,
+		Name:           categoryName,
+		SubSubjectName: subSubjectName,
+	}
 }
 
 func parsePercentage(text string) float64 {
